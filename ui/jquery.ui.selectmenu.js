@@ -276,7 +276,7 @@ $.widget("ui.selectmenu", {
 			var opt = $( this );
 			selectOptionData.push({
 				value: opt.attr( 'value' ),
-				text: self._formatText( opt.text(), opt ),
+				text: self._formatText( opt.html(), opt ),
 				selected: opt.attr( 'selected' ),
 				disabled: opt.attr( 'disabled' ),
 				classes: opt.attr( 'class' ),
@@ -300,7 +300,7 @@ $.widget("ui.selectmenu", {
 					thisLiAttr[ 'class' ] = 'ui-state-disabled';
 				}
 				var thisAAttr = {
-					html: selectOptionData[ i ].text || '&nbsp;',
+					html: selectOptionData[ i ].text || '&#a0;',
 					href: '#nogo',
 					tabindex : -1,
 					role: 'option',
