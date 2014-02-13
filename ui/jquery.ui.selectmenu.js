@@ -1,8 +1,8 @@
  /*
- * jQuery UI Selectmenu version 1.4.0pre
+ * jQuery UI Selectmenu version 1.5.0pre
  *
  * Copyright (c) 2009-2010 filament group, http://filamentgroup.com
- * Copyright (c) 2010-2012 Felix Nagel, http://www.felixnagel.com
+ * Copyright (c) 2010-2013 Felix Nagel, http://www.felixnagel.com
  * Licensed under the MIT (MIT-LICENSE.txt)
  *
  * https://github.com/fnagel/jquery-ui/wiki/Selectmenu
@@ -28,13 +28,13 @@ $.widget("ui.selectmenu", {
 
 	_create: function() {
 		var self = this, o = this.options;
-		
+
 		// make / set unique id
 		var selectmenuId = this.element.uniqueId().attr( "id" );
 
 		// quick array of button and menu id's
 		this.ids = [ selectmenuId, selectmenuId + '-button', selectmenuId + '-menu' ];
-		
+
 		// define safe mouseup for future toggling
 		this._safemouseup = true;
 		this.isOpen = false;
@@ -307,7 +307,7 @@ $.widget("ui.selectmenu", {
 					'aria-selected' : false
 				};
 				if ( selectOptionData[ i ].disabled ) {
-					thisAAttr[ 'aria-disabled' ] = selectOptionData[ i ].disabled;
+					thisAAttr[ 'aria-disabled' ] = true;
 				}
 				if ( selectOptionData[ i ].typeahead ) {
 					thisAAttr[ 'typeahead' ] = selectOptionData[ i ].typeahead;
@@ -388,7 +388,7 @@ $.widget("ui.selectmenu", {
 				}
 			}
 		} else {
-			$(' <li role="presentation"><a href="#nogo" tabindex="-1" role="option"></a></li>' ).appendTo( this.list );
+			$('<li role="presentation"><a href="#nogo" tabindex="-1" role="option"></a></li>' ).appendTo( this.list );
 		}
 		// we need to set and unset the CSS classes for dropdown and popup style
 		var isDropDown = ( o.style == 'dropdown' );
@@ -414,13 +414,15 @@ $.widget("ui.selectmenu", {
 			this.list.width( o.menuWidth ? o.menuWidth : o.width - o.handleWidth );
 		}
 
-		// reset height to auto
-		this.list.css( 'height', 'auto' );
-		var listH = this.listWrap.height();
-		var winH = $( window ).height();
-		// calculate default max height
-		var maxH = o.maxHeight ? Math.min( o.maxHeight, winH ) : winH / 3;
-		if ( listH > maxH ) this.list.height( maxH );
+		// Android 2 (Gingerbread) doesn't support internal scrollable divs.
+		// Don't limit the menu height for that browser.
+		if ( !navigator.userAgent.match( /Android 2/ ) ) {
+			var listH = this.listWrap.height();
+			var winH = $( window ).height();
+			// calculate default max height
+			var maxH = o.maxHeight ? Math.min( o.maxHeight, winH ) : winH / 3;
+			if ( listH > maxH ) this.list.height( maxH );
+		}
 
 		// save reference to actionable li's (not group label li's)
 		this._optionLis = this.list.find( 'li:not(.ui-selectmenu-group)' );
@@ -703,73 +705,54 @@ $.widget("ui.selectmenu", {
 
 	_setOption: function( key, value ) {
 		this.options[ key ] = value;
-		// set
 		if ( key == 'disabled' ) {
 			if ( value ) this.close();
 			this.element
 				.add( this.newelement )
 				.add( this.list )[ value ? 'addClass' : 'removeClass' ]( 'ui-selectmenu-disabled ' + 'ui-state-disabled' )
-				.attr( "aria-disabled" , value );
+				.attr( "aria-disabled" , value )
+				.attr( "tabindex" , value ? 1 : 0 );
 		}
 	},
 
 	disable: function( index, type ){
-			// if options is not provided, call the parents disable function
-			if ( typeof( index ) == 'undefined' ) {
-				this._setOption( 'disabled', true );
-			} else {
-				if ( type == "optgroup" ) {
-					this._toggleOptgroup( index, false );
-				} else {
-					this._toggleOption( index, false );
-				}
-			}
-	},
-
-	enable: function( index, type ) {
-			// if options is not provided, call the parents enable function
-			if ( typeof( index ) == 'undefined' ) {
-				this._setOption( 'disabled', false );
-			} else {
-				if ( type == "optgroup" ) {
-					this._toggleOptgroup( index, true );
-				} else {
-					this._toggleOption( index, true );
-				}
-			}
-	},
-
-	_disabled: function( elem ) {
-			return $( elem ).hasClass( 'ui-state-disabled' );
-	},
-
-	_toggleOption: function( index, flag ) {
-		var optionElem = this._optionLis.eq( index );
-		if ( optionElem ) {
-				optionElem
-					.toggleClass( 'ui-state-disabled', flag )
-					.find( "a" ).attr( "aria-disabled", !flag );
-			if ( flag ) {
-				this.element.find( "option" ).eq( index ).attr( "disabled", "disabled" );
-			} else {
-				this.element.find( "option" ).eq( index ).removeAttr( "disabled" );
-			}
+		// if options is not provided, call the parents disable function
+		if ( typeof( index ) == 'undefined' ) {
+			this._setOption( 'disabled', true );
+		} else {
+			this._toggleEnabled( ( type || "option" ), index, false );
 		}
 	},
 
+	enable: function( index, type ) {
+		// if options is not provided, call the parents enable function
+		if ( typeof( index ) == 'undefined' ) {
+			this._setOption( 'disabled', false );
+		} else {
+			this._toggleEnabled( ( type || "option" ), index, true );
+		}
+	},
+
+	_disabled: function( elem ) {
+		return $( elem ).hasClass( 'ui-state-disabled' );
+	},
+
 	// true = enabled, false = disabled
-	_toggleOptgroup: function( index, flag ) {
-			var optGroupElem = this.list.find( 'li.ui-selectmenu-group-' + index );
-			if ( optGroupElem ) {
-				optGroupElem
-					.toggleClass( 'ui-state-disabled', flag )
-					.attr( "aria-disabled", !flag );
-				if ( flag ) {
-					this.element.find( "optgroup" ).eq( index ).attr( "disabled", "disabled" );
-				} else {
-					this.element.find( "optgroup" ).eq( index ).removeAttr( "disabled" );
-				}
+	_toggleEnabled: function( type, index, flag ) {
+		var element = this.element.find( type ).eq( index ),
+			elements = ( type === "optgroup" ) ? this.list.find( 'li.ui-selectmenu-group-' + index ) : this._optionLis.eq( index );
+
+		if ( elements ) {
+			elements
+				.toggleClass( 'ui-state-disabled', !flag )
+				.attr( "aria-disabled", !flag );
+
+			if ( flag ) {
+				element.removeAttr( "disabled" );
+			} else {
+				element.attr( "disabled", "disabled" );
 			}
+		}
 	},
 
 	index: function( newIndex ) {
